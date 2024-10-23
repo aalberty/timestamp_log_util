@@ -1,7 +1,3 @@
-const std = @import("std");
-const Instant = std.time.Instant;
-const print = std.debug.print;
-
 // Been having an issue where my mouse periodically spazzes out; it'd be nice to have
 // a quick tool to fire & forget when the issue starts so I can later try to track
 // down the issue in logs somewhere.
@@ -13,9 +9,13 @@ const print = std.debug.print;
 // - "Optional" input parameter for a message to come after the timestamp so we can
 //      indicate why we took that timestamp if we have multiple issues going on at
 //      the same time
+//      - Optional in quotes since the impl can be "if no args, don't add a label/add generic"
 //
 //
-// Below are the stubs for these features:
+
+const std = @import("std");
+const Instant = std.time.Instant;
+const print = std.debug.print;
 
 const Time = struct { hours: u64, minutes: u64, seconds: u64 };
 
@@ -23,7 +23,7 @@ pub fn main() !void {
     // Inherently x-platform
     const test_time = std.time.timestamp();
     var only_time = @rem(test_time, std.time.s_per_day);
-    // EST
+    // EST(-ish; daylight savings time sucks)
     only_time -= (std.time.s_per_hour * 4);
     const my_time = secToTime(only_time);
 
@@ -35,8 +35,6 @@ pub fn main() !void {
     defer arena_instance.deinit();
     const arena = arena_instance.allocator();
 
-    // This part works
-
     const args = try std.process.argsAlloc(arena);
 
     for (args, 1..) |arg, i| {
@@ -46,7 +44,6 @@ pub fn main() !void {
 
 //CONSIDER: add ns/ms support for more detailed timestamps?
 
-/// Swap seconds to HH:MM.SS format
 fn secToTime(s: i64) Time {
     const h: i64 = @divFloor(s, 3600);
     const u_h: u64 = @intCast(h);
