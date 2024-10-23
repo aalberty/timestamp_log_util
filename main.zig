@@ -12,25 +12,27 @@
 //      - Optional in quotes since the impl can be "if no args, don't add a label/add generic"
 //
 //
+// can be tested using format `zig run main.zig -- arg_1 arg_2 ... arg_n`
 
 const std = @import("std");
-const Instant = std.time.Instant;
+const File = std.fs.File;
 const print = std.debug.print;
 
 const Time = struct { hours: u64, minutes: u64, seconds: u64 };
 
 pub fn main() !void {
-    // Inherently x-platform
     const test_time = std.time.timestamp();
     var only_time = @rem(test_time, std.time.s_per_day);
     // EST(-ish; daylight savings time sucks)
     only_time -= (std.time.s_per_hour * 4);
     const my_time = secToTime(only_time);
 
-    // This gets us the formatted timestamp that we would want to log out
     print("{d:2}:{d:2}.{d:2}\n\n\n", .{ my_time.hours, my_time.minutes, my_time.seconds });
 
-    // can be tested using format `zig run main.zig -- arg_1 arg_2 ... arg_n`
+    const c_file = openConfFile(); // TODO: catch potential err here
+    defer c_file.close();
+    // TODO: write timestamp to config file
+
     var arena_instance = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena_instance.deinit();
     const arena = arena_instance.allocator();
@@ -52,4 +54,17 @@ fn secToTime(s: i64) Time {
     const rs: i64 = (s - (h * 3600) - (m * 60));
     const u_s: u64 = @intCast(rs);
     return Time{ .hours = u_h, .minutes = u_m, .seconds = u_s };
+}
+
+/// Makes it if it doesn't yet exist; returns the file for use
+fn openConfFile() !File {
+    const cwd: std.fs.Dir = std.fs.cwd();
+
+    // If I'm reading the docs right, we should be able to try creating the file,
+    // and the default `exclusive=false` flag on the call should make it so that
+    // if the file already exists, then it just opens it.
+
+    const file: std.fs.File = try cwd.createFile(".timestump", .{});
+    // Caller needs to close file!!!
+    return file;
 }
